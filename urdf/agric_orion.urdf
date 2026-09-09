@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<robot name = "agric_orion">
+
+    <link name="base_link">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry><box size="0.4 0.3 0.15"/></geometry>
+        </visual>
+
+        <collsion>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry><box size="0.4 0.3 0.15"/></geometry>
+        </collsion>
+
+        <inertia>
+            <mass value="5.0"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.08" iyz="0" izz="0.1"/>
+        </inertia>
+    </link>
+
+    <link name="left_wheel">
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+        </collision>
+
+        <inertia>
+            <mass value="0.5"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        </inertia> 
+
+    </link>
+
+    <joint name="left_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="left_wheel"/>
+        <origin xyz="0 0.175 -0.05" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="right_wheel">
+        <visual>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+        </visual>
+
+        <collision>
+            <origin xyz="0 0 0" rpy="1.5708 0 0"/>
+            <geometry><cylinder radius="0.05" length="0.04"/></geometry>
+        </collision>
+
+        <inertia>
+            <mass value="0.5"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        </inertia>
+    </link>
+
+    <joint name="right_wheel_joint" type="continuous">
+        <parent link="base_link"/>
+        <child link="right_wheel"/>
+        <origin xyz="0 -0.175 -0.05" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="caster_wheel">
+        <visual>
+            <geometry><sphere radius="0.025"/></geometry>
+            
+        </visual>
+
+        <collision>
+            <geometry><sphere radius="0.025"/></geometry>
+        </collision>
+
+        <inertia>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0"/>
+            <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+        </inertia>
+    </link>
+
+    <joint name="caster_joint" type="fixed">
+        <parent link="base_link"/>
+        <child link="caster_wheel"/>
+        <origin xyz="0.15 0 -0.075" rpy="0 0 0"/>
+    </joint>
+
+</robot>
