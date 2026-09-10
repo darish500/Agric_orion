@@ -16,6 +16,7 @@ setup(
     (os.path.join('share', 'agric_orion', 'launch'), glob('launch/*.launch.py')),
     (os.path.join('share', 'agric_orion' , 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
     (os.path.join('share', 'agric_orion','config'), glob('config/*.yaml')),
+    (os.path.join('share' , 'agric_orion', 'worlds'), glob('worlds/*.sdf')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

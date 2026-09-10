@@ -10,23 +10,24 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     pkg_share= get_package_share_directory('agric_orion')
     xacro_path= os.path.join(pkg_share,'urdf','agric_orion.xacro')
+    world_path= os.path.join(pkg_share,'worlds','agric_field.sdf')
+
+    gz_sim = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('ros_gz_sim'),
+                    'launch',
+                    'gz_sim.launch.py'
+                )
+            ),
+            launch_arguments= {'gz_args' : f'-r {world_path}'}.items()
+        )
 
     robot_description = ParameterValue(
         Command([
             'xacro ',xacro_path
         ]),
         value_type=str
-    )
-
-    gz_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('ros_gz_sim'),
-                'launch',
-                'gz_sim.launch.py'
-            )
-        ),
-        launch_arguments={'gz_args': '-r empty.sdf'}.items()
     )
 
     robot_state_publisher = Node(
@@ -46,6 +47,8 @@ def generate_launch_description():
         ],
         output='screen'
     )
+
+    
 
     return LaunchDescription([
         gz_sim,
