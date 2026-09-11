@@ -31,6 +31,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'world_state_node = agric_orion.world_state_node:main',
         ],
     },
 )
