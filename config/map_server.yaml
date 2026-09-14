@@ -1,0 +1,8 @@
+map_server:
+  ros_parameters:
+    yaml_filename: "maps/map.yaml"
+
+lifecycle_managera_map:
+  ros_parameters:
+    autostart= true
+    node_names= ["map_server"]

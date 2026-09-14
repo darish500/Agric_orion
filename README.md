@@ -334,3 +334,18 @@ rather than silently patched. The goal has been to understand the full
 system well enough to explain it, not just to produce a working demo —
 several genuine limitations (drive timeout, LiDAR blind spot) are known,
 understood, and consciously deferred rather than accidental gaps.
+
+## map -> odom is a static, non-correcting simplification (Milestone 3.3)
+Limitation
+
+
+The map -> odom transform is currently published as a single static
+transform matching the robot's known spawn pose, not real localization.
+It never corrects for odometry drift and never uses sensor data. This
+is valid only because map.pgm/map.yaml were authored directly in the
+same coordinate system as the Gazebo world -- it would be meaningless
+with a real, independently-surveyed map or a real robot.
+
+Planned replacement (future, not Stage 3 baseline): AMCL, which
+continuously compares /scan against the known map to correct odometry
+drift in real time.

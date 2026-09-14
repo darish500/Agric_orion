@@ -17,6 +17,8 @@ setup(
     (os.path.join('share', 'agric_orion' , 'urdf'), glob('urdf/*.urdf') + glob('urdf/*.xacro')),
     (os.path.join('share', 'agric_orion','config'), glob('config/*.yaml')),
     (os.path.join('share' , 'agric_orion', 'worlds'), glob('worlds/*.sdf')),
+    (os.path.join('share' , 'agric_orion' , 'maps') , glob("maps/*.pgm") + glob('maps/*.yaml')),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -32,6 +34,7 @@ setup(
     entry_points={
         'console_scripts': [
             'world_state_node = agric_orion.world_state_node:main',
+            'test_follow_path = agric_orion.test_follow_path:main',
         ],
     },
 )
