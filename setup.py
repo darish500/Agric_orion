@@ -35,6 +35,8 @@ setup(
         'console_scripts': [
             'world_state_node = agric_orion.world_state_node:main',
             'test_follow_path = agric_orion.test_follow_path:main',
+            'nav2_eval_node = agric_orion.nav2_eval_node:main', 
+            'agent_bridge_node = agric_orion.agent_bridge_node:main',
         ],
     },
 )

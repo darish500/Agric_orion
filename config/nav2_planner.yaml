@@ -27,8 +27,8 @@ global_costmap:
         map_subscribe_transient_local: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        cost_scaling_factor: 15.0
+        inflation_radius: 0.65
 
 lifecycle_manager_planner:
   ros__parameters:

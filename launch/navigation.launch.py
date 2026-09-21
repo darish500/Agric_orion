@@ -11,13 +11,6 @@ def generate_launch_description():
     controller_yaml = os.path.join(pkg_share, 'config', 'nav2_controller.yaml')
     bt_nav_yaml = os.path.join(pkg_share, 'config', 'nav2_bt_navigator.yaml')
 
-    map_server = Node(
-        package='nav2_map_server',
-        executable='map_server',
-        name='map_server',
-        output='screen',
-        parameters=[{'yaml_filename': map_yaml}]
-    )
 
     planner_server = Node(
         package='nav2_planner',
@@ -58,18 +51,14 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'autostart': True,
-            'node_names': ['map_server', 'planner_server', 'controller_server',
+            'node_names': ['planner_server', 'controller_server',
                             'behavior_server', 'bt_navigator']
         }]
     )
 
-    lifecycle_manager_delayed = TimerAction(
-        period=3.0, 
-        actions= [lifecycle_manager]
-    )
 
 
     return LaunchDescription([
-        map_server, planner_server, controller_server,
-        behavior_server, bt_navigator, lifecycle_manager_delayed
+     planner_server, controller_server,
+        behavior_server, bt_navigator, lifecycle_manager
     ])
