@@ -14,6 +14,7 @@ exactly like sanitizing external input in any secure system.
 KNOWN_LOCATIONS = {
     "northern_inspection_point": (-3.0, 3.0),
     "home_base": (-3.0, 0.0),
+    "eastern_field_point": (5.0 , 0.0)
 }
 
 # The actual physical extent of the known map (from generate_map.py's

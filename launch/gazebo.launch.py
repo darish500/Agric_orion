@@ -43,9 +43,9 @@ def generate_launch_description():
         arguments=[
             '-topic', 'robot_description',
             '-name', 'agric_orion',
-            'x', '-3.0'
-            '-y', '0.0'
-            '-z', '0.3'
+            '-x', '-3.0',
+            '-y', '0.0',
+            '-z', '0.3',
         ],
         output='screen'
     )

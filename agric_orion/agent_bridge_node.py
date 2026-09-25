@@ -26,7 +26,7 @@ class AgentBridgeNode(Node):
         # mechanism (a topic, a service, eventually real Nemotron
         # input) is a later concern. mission_sent guards against
         # firing repeatedly on every /world_state message.
-        self.test_mission = "Go to the northern inspection point."
+        self.test_mission = "Trigger Simulated API Failure."
         self.mission_sent = False
 
         self.get_logger().info('agent_bridge_node started, waiting for world_state...')
@@ -35,6 +35,7 @@ class AgentBridgeNode(Node):
         self.reeval_timer = self.create_timer (2.0 , self.reevaluate_mission)
 
     def world_state_callback(self, msg: String):
+        
         try:
             self.latest_world_state = json.loads(msg.data)
         except (json.JSONDecodeError, TypeError) as e:
@@ -46,10 +47,21 @@ class AgentBridgeNode(Node):
             self.run_mission(self.test_mission)
 
     def run_mission(self, mission_text):
-        self.get_logger().info(f'[AGENT BRIDGE] Mission: "{mission_text}"')
+        
 
-        raw_response = self.agent.interpret_mission(
-            mission_text, world_state=self.latest_world_state)
+        self.get_logger().info(f'[AGENT BRIDGE] Mission: "{mission_text}"')
+        try:
+            raw_response = self.agent.interpret_mission(
+                mission_text, world_state=self.latest_world_state)
+
+        except Exception as e:
+            self.get_logger().error(
+                f'[Agent Bridge] Agent call failed: {e}. '
+                f"Nothing sent to the nav2."
+            )
+
+            return
+
         self.get_logger().info(f'[MOCK AGENT] raw response: {raw_response}')
 
         is_valid, result = validate_agent_response(raw_response)

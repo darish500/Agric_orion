@@ -18,12 +18,23 @@ MOCK_RESPONSES = {
         "action": "CHAT",
         "reason": "This request is not a navigation mission."
     },
+
+    "go to the eastern field point":{
+        "action": "NAVIGATE",
+        "target": {"location": "eastern_field_point"},
+        "reason": "Eastern field point selected as requested."
+    },
 }
 
 
 class MockNemotronAgent:
     def interpret_mission(self, mission_text, world_state=None):
         key = mission_text.strip().lower().rstrip(".?!")
+
+        if key == "trigger simulated api failure":
+            raise ConnectionError("Simulated Nemotron API failure (timeout)")
+
+        
 
         # New: a world-state-aware decision, made BEFORE looking up the
         # mission response. This simulates the agent reasoning over

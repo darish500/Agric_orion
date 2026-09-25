@@ -139,3 +139,43 @@ Planned investigation (future stage, not urgent): tune
 SimpleGoalChecker / RegulatedPurePursuitController deceleration
 interaction, or evaluate an alternate controller plugin (DWB, MPPI)
 with different goal-approach behavior.
+
+
+
+## Turning-induced odometry drift breaks coordinate-based obstacle identification (Stage 5, Milestone 5.2)
+
+`mission_context_node.py` identifies which known object the robot is
+facing by projecting the LiDAR's forward-sector obstacle distance into
+map-frame coordinates (correcting for the static map->odom spawn
+offset, the LiDAR's 0.15m forward mounting position, and each known
+object's real footprint radius) and matching it against a fixed
+registry of object positions from agric_field.sdf.
+
+This matching logic was verified correct to within centimeters on a
+zero-turn, straight-line approach to obstacle_1 (the only registered
+object reachable from spawn without turning): the projected estimate
+landed exactly 0.5m from the object's center, precisely equal to its
+known footprint radius.
+
+However, every attempt to validate the same logic against any other
+registered object -- all of which require at least one turn to reach
+from spawn -- failed, with estimates missing the correct object by
+roughly 1-2m even after a single turn of well under 90 degrees.
+
+Diagnosis: this is not a matching-logic defect. `/odom` position (and
+therefore `/world_state` and `/mission_context`, both derived from it)
+already carries the uncorrected drift documented under Stage 3's
+static, non-correcting map->odom transform -- but this milestone shows
+the effect is worse than previously characterized: drift large enough
+to break a tight (0.25-0.65m) match threshold appears after a single
+modest turn, not only after extended driving. Skid-steer wheel slip
+during turning, with no localization correction feeding back into
+`/odom`, is the suspected mechanism.
+
+Decision: accepted as a Stage 5 limitation inherited from Stage 3, not
+solved within Milestone 5.2. The coordinate-lookup approach for
+obstacle identification is reliable only immediately after spawn or
+after purely straight-line motion, and is not a robust general
+solution. This result directly motivates Milestone 5.4's investigation
+of camera-based identification, which would not depend on the robot's
+absolute position at all.
