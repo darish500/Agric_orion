@@ -37,7 +37,9 @@ setup(
             'test_follow_path = agric_orion.test_follow_path:main',
             'nav2_eval_node = agric_orion.nav2_eval_node:main', 
             'agent_bridge_node = agric_orion.agent_bridge_node:main',
-            'mission_context_node = agric_orion.mission_context_node:main'
+            'mission_context_node = agric_orion.mission_context_node:main',
+            'vision_agent = agric_orion.vision_agent:main',
+            'vision_context_node = agric_orion.vision_context_node:main',
         ],
     },
 )

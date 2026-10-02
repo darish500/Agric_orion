@@ -36,3 +36,41 @@ if __name__ == "__main__":
 
         is_valid, result = validate_agent_response(raw_response)
         print(f"  Validation result: valid={is_valid} -> {result}")
+
+            # --- New: vision_context integration checks (Milestone 5.6) ---
+    print("\n--- Vision context integration ---")
+
+    vision_agrees = {
+        "description": "Two obstacles with a narrow gap between them.",
+        "path_looks_blocked": True,
+        "source": "mock",
+    }
+    vision_disagrees = {
+        "description": "Open, flat ground ahead.",
+        "path_looks_blocked": False,
+        "source": "mock",
+    }
+
+    print("\nCase A: LiDAR blocked, vision agrees")
+    result_a = agent.interpret_mission(
+        "Go to the northern inspection point.",
+        world_state=WORLD_STATE_BLOCKED,
+        vision_context=vision_agrees,
+    )
+    print(f"  {result_a}")
+
+    print("\nCase B: LiDAR blocked, vision disagrees")
+    result_b = agent.interpret_mission(
+        "Go to the northern inspection point.",
+        world_state=WORLD_STATE_BLOCKED,
+        vision_context=vision_disagrees,
+    )
+    print(f"  {result_b}")
+
+    print("\nCase C: LiDAR clear, vision cautious")
+    result_c = agent.interpret_mission(
+        "Go to the northern inspection point.",
+        world_state=WORLD_STATE_CLEAR,
+        vision_context=vision_agrees,
+    )
+    print(f"  {result_c}")

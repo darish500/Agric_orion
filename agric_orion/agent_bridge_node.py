@@ -16,9 +16,14 @@ class AgentBridgeNode(Node):
 
         self.agent = MockNemotronAgent()
         self.latest_world_state = None
+        self.latest_vision_context = None 
 
         self.world_state_sub = self.create_subscription(
             String, 'world_state', self.world_state_callback, 10)
+
+        self.vision_context_sub = self.create_subscription(
+            String , 'vision_context' , self.vision_context_callback , 10
+        )
 
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
@@ -26,7 +31,7 @@ class AgentBridgeNode(Node):
         # mechanism (a topic, a service, eventually real Nemotron
         # input) is a later concern. mission_sent guards against
         # firing repeatedly on every /world_state message.
-        self.test_mission = "Trigger Simulated API Failure."
+        self.test_mission = "Go to the northern inspection point."
         self.mission_sent = False
 
         self.get_logger().info('agent_bridge_node started, waiting for world_state...')
@@ -42,9 +47,16 @@ class AgentBridgeNode(Node):
             self.get_logger().error(f'Failed to parse world_state JSON: {e}')
             return
 
-        if not self.mission_sent:
+        if not self.mission_sent and self.latest_vision_context is not None:
             self.mission_sent = True
             self.run_mission(self.test_mission)
+
+    def vision_context_callback(self , msg: String):
+        try:
+            self.latest_vision_context= json.loads(msg.data)
+
+        except (json.JSONDecodeError , TypeError) as e:
+            self.get_logger().error(f'Failed to parse vision_context JSPN: {e}')
 
     def run_mission(self, mission_text):
         
@@ -52,7 +64,10 @@ class AgentBridgeNode(Node):
         self.get_logger().info(f'[AGENT BRIDGE] Mission: "{mission_text}"')
         try:
             raw_response = self.agent.interpret_mission(
-                mission_text, world_state=self.latest_world_state)
+                mission_text,
+                  world_state=self.latest_world_state, 
+                  vision_context = self.latest_vision_context
+                  )
 
         except Exception as e:
             self.get_logger().error(

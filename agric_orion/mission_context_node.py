@@ -10,11 +10,8 @@ import tf2_ros
 from tf2_ros import LookupException, ConnectivityException, ExtrapolationException
 
 
-# Known fixed objects in agric_field.sdf, in MAP frame coordinates:
-# (x, y, footprint_radius). footprint_radius is half the object's
-# horizontal size (box half-width, or cylinder radius) -- taken
-# directly from each model's <geometry> in the world file, not
-# guessed.
+
+
 KNOWN_OBJECT = {
     'obstacle_1':          (2.0, 0.0, 0.5),
     'obstacle_2':          (2.0, -1.3, 0.5),
@@ -24,32 +21,16 @@ KNOWN_OBJECT = {
     'dynamic_test_obstacle': (-3.0, 1.5, 0.25),
 }
 
-# The LiDAR is mounted 0.15m forward of base_link's origin (see
-# lidar_joint's <origin xyz="0.15 0 0.1"/> in agric_orion.xacro).
-# nearest_obstacle_m is measured from the sensor, not from the point
-# world_state reports as robot position -- so this offset must be
-# applied before projecting where the obstacle actually is, or every
-# estimate is silently short by this exact amount.
 LIDAR_FORWARD_OFFSET_M = 0.15
-
-# Extra slack beyond an object's own footprint radius, to absorb
-# residual approximation error (the forward sector is +/-10 degrees,
-# not a single exact ray; the LiDAR beam that actually returns the
-# minimum range may not be exactly centered on the object). This is
-# deliberately small -- it is slack on top of a real, measured
-# footprint, not a substitute for one.
 MATCH_MARGIN_M = 0.15
 
 
+
+
 def identify_obstacle(robot_x, robot_y, yaw, nearest_obstacle_m):
-    """
-    robot_x, robot_y must already be in map-frame (true world)
-    coordinates when this is called -- not raw odom.
-    """
     if robot_x is None or robot_y is None or yaw is None or nearest_obstacle_m is None:
         return 'unknown'
 
-    # Project from the LiDAR's true position, not base_link's.
     lidar_x = robot_x + LIDAR_FORWARD_OFFSET_M * math.cos(yaw)
     lidar_y = robot_y + LIDAR_FORWARD_OFFSET_M * math.sin(yaw)
 
@@ -57,7 +38,7 @@ def identify_obstacle(robot_x, robot_y, yaw, nearest_obstacle_m):
     est_y = lidar_y + nearest_obstacle_m * math.sin(yaw)
 
     best_name = 'unknown'
-    best_margin = None  # how far inside the acceptance radius the best match is
+    best_margin = None
 
     for name, (obj_x, obj_y, footprint_radius) in KNOWN_OBJECT.items():
         dist = math.hypot(est_x - obj_x, est_y - obj_y)
@@ -72,12 +53,25 @@ def identify_obstacle(robot_x, robot_y, yaw, nearest_obstacle_m):
     return best_name
 
 
+
+
 class MissionContextNode(Node):
     def __init__(self):
         super().__init__('mission_context_node')
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+
+        # --- Temporal state (new, Milestone 5.3) ---
+        # Memory of path_blocked across callbacks, so we can detect
+        # transitions and track how long a blockage has persisted.
+        # previous_path_blocked starts False: on the very first
+        # message, if path_blocked happens to already be True, this
+        # correctly reports it as a fresh transition (duration ~0),
+        # which is the honest answer -- we have no earlier history to
+        # know otherwise.
+        self.previous_path_blocked = False
+        self.blocked_since = None  # a ROS Time, or None if not currently blocked
 
         self.world_state_sub = self.create_subscription(
             String, 'world_state', self.world_state_callback, 10
@@ -88,6 +82,8 @@ class MissionContextNode(Node):
         )
 
         self.get_logger().info('mission_context_node started')
+
+
 
     def get_map_to_odom_offset(self):
         try:
@@ -101,6 +97,47 @@ class MissionContextNode(Node):
         offset_y = transform.transform.translation.y
         return (offset_x, offset_y)
 
+
+
+    def update_blocked_duration(self, path_blocked):
+        """
+        Updates temporal state for path_blocked and returns
+        (blocked_changed, blocked_duration_s).
+
+        blocked_changed is True only on the exact cycle the state
+        flips (either direction), not on every cycle it happens to be
+        True.
+        """
+        now = self.get_clock().now()
+
+        blocked_changed = (path_blocked != self.previous_path_blocked)
+
+
+
+        if path_blocked and self.blocked_since is None:
+            # Just became blocked (or first message ever arrived
+            # already blocked) -- start the clock.
+            self.blocked_since = now
+
+        if not path_blocked:
+            # Cleared -- no active streak.
+            self.blocked_since = None
+
+
+
+        if self.blocked_since is not None:
+            blocked_duration_s = (now - self.blocked_since).nanoseconds / 1e9
+        else:
+            blocked_duration_s = 0.0
+
+        # Update memory for the next callback. Must happen last --
+        # everything above depends on the OLD value.
+        self.previous_path_blocked = path_blocked
+
+        return blocked_changed, blocked_duration_s
+
+
+
     def world_state_callback(self, msg: String):
         try:
             world_state = json.loads(msg.data)
@@ -111,6 +148,8 @@ class MissionContextNode(Node):
         if not isinstance(world_state, dict):
             self.get_logger().error('world_state payload must be a JSON object')
             return
+
+
 
         position = world_state.get('position', {})
         odom_x = position.get('x')
@@ -126,6 +165,8 @@ class MissionContextNode(Node):
         if offset is None:
             return
 
+
+
         offset_x, offset_y = offset
         map_x = odom_x + offset_x
         map_y = odom_y + offset_y
@@ -134,6 +175,10 @@ class MissionContextNode(Node):
             obstacle_identity = identify_obstacle(map_x, map_y, yaw, nearest_obstacle_m)
         else:
             obstacle_identity = None
+
+        blocked_changed, blocked_duration_s = self.update_blocked_duration(path_blocked)
+
+
 
         mission_context = {
             'robot': {
@@ -145,12 +190,18 @@ class MissionContextNode(Node):
                 'path_blocked': path_blocked,
                 'nearest_obstacle_m': nearest_obstacle_m,
                 'obstacle_identity': obstacle_identity,
+                'path_blocked_changed': blocked_changed,
+                'path_blocked_duration_s': round(blocked_duration_s, 1),
             },
         }
+
+
 
         msg_out = String()
         msg_out.data = json.dumps(mission_context)
         self.context_pub.publish(msg_out)
+
+
 
 
 def main(args=None):
@@ -159,6 +210,8 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
+
 
 
 if __name__ == '__main__':
