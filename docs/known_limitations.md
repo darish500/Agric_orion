@@ -179,3 +179,29 @@ after purely straight-line motion, and is not a robust general
 solution. This result directly motivates Milestone 5.4's investigation
 of camera-based identification, which would not depend on the robot's
 absolute position at all.
+
+
+## Milestone 5.7 cancel-and-reevaluate: implemented and reviewed, not live-triggered
+
+`agent_bridge_node.py`'s mid-mission cancellation logic (store
+active_goal_handle, cancel_goal_async on sustained 8s+ blockage,
+re-run interpret_mission once cancellation is confirmed) was built,
+code-reviewed against ROS 2's asynchronous action-cancellation
+pattern, and verified not to regress the normal NAVIGATE->SUCCEEDED
+path (confirmed via a full successful run with the new code in
+place).
+
+The specific trigger condition (a goal actively in progress, blocked
+continuously for over 8 seconds) could not be forced live in testing:
+Nav2's own autonomous control of /cmd_vel while a goal is active makes
+manual teleop an invalid way to create a blockage (it fights Nav2's
+own commands rather than representing a real obstacle), and dragging
+objects via the Gazebo GUI during an active simulation was not
+successful in this environment.
+
+Decision: the mechanism is considered implemented but not yet
+live-verified end-to-end. This is a test-environment limitation, not
+a known code defect. Live verification remains worth revisiting with
+a scripted approach (e.g. a small test script that spawns a static
+obstacle directly on the planned path at a fixed time after goal
+acceptance) rather than manual/GUI-based obstacle placement.
