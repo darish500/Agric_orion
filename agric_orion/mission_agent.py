@@ -51,7 +51,7 @@ def _vision_note(vision_context):
 
 
 class MockNemotronAgent:
-    def interpret_mission(self, mission_text, world_state=None, vision_context=None):
+    def interpret_mission(self, mission_text, world_state=None, vision_context=None , visual_evidence = None ):
         key = mission_text.strip().lower().rstrip(".?!")
 
         if key == "trigger simulated api failure":
@@ -61,6 +61,29 @@ class MockNemotronAgent:
         vision_says_blocked = (
             vision_context.get('path_looks_blocked') if vision_context else None
         )
+
+        lidar_blocked = (
+            world_state is not None and world_state.get('path_blocked') is True 
+        )
+
+        opencv_blocked = (
+            visual_evidence is not None
+            and visual_evidence.get('visual_obstruction') is True
+        )
+
+        if (opencv_blocked and not lidar_blocked
+            and MOCK_RESPONSES.get(key , {}).get('action') == 'NAVIGATE' ):
+            return {
+                "action": "WAIT",
+                "reason": (
+                    "LiDAR path_blocked is False, but OpenCV visual evidence reports "
+                    f"an obstruction in the forward corridor "
+                    f"(range ~{visual_evidence.get('est_range_m')} m, "
+                    f"lateral={visual_evidence.get('lateral_bin')}, "
+                    f"occupancy={visual_evidence.get('corridor_occupancy')}); "
+                    "holding off on issuing a new navigation objective."
+                ),
+            }
 
         # LiDAR-grounded world_state remains authoritative for the
         # blocked/not-blocked decision -- see docs/stage5_vision_experiment.md
