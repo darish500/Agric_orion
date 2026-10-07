@@ -1,7 +1,5 @@
 # Agri-ORION
 
-**Nebius × NVIDIA Global AI Hackathon 2026 — Physical AI track**
-
 Agentic Physical AI for adaptive autonomous vehicle missions. A simulated
 4-wheel skid-steer ground vehicle, built as an independent research
 project, developed entirely from scratch and kept structurally separate
@@ -18,7 +16,7 @@ Long-term architecture:
 ```
 Human mission
       ↓
-AI mission reasoning        (NVIDIA Nemotron, via Nebius Token Factory)
+AI mission reasoning       
       ↓
 Mission planner
       ↓
