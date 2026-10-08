@@ -17,6 +17,12 @@ class AgentBridgeNode(Node):
         self.agent = MockNemotronAgent()
         self.latest_world_state = None
         self.latest_vision_context = None
+        self.declare_parameter('use_visual_evidence' , True)
+        self.declare_parameter('mission' , 'Go to the norther inspection point.')
+        self.declare_parameter('evidence_max_age_s' , 1.5)
+        self.declare_parameter('require_fresh_evidence' , False)
+        self.latest_visual_evidence = None
+        self.visual_evidence_receieved_at = None
 
         self.world_state_sub = self.create_subscription(
             String, 'world_state', self.world_state_callback, 10)
@@ -25,9 +31,14 @@ class AgentBridgeNode(Node):
             String, 'vision_context', self.vision_context_callback, 10
         )
 
+        self.visual_evidence_sub = self.create_subscription(
+            String , 'visual_evidence' , self.visual_evidence_callback , 10
+        )
+
+
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
-        self.test_mission = "Go to the northern inspection point."
+        self.test_mission = self.get_parameter('mission').value
         self.mission_sent = False
         self.current_mission_text = None
 
@@ -45,7 +56,12 @@ class AgentBridgeNode(Node):
             self.get_logger().error(f'Failed to parse world_state JSON: {e}')
             return
 
-        if not self.mission_sent and self.latest_vision_context is not None:
+        evidence_ready = (not self.get_parameter('use_visual_evidence').value 
+                                  or self.latest_visual_evidence is not None 
+                                  )
+        if (not self.mission_sent and self.latest_vision_context is not None
+                    and evidence_ready): 
+            
             self.mission_sent = True
             self.run_mission(self.test_mission)
 
@@ -55,15 +71,53 @@ class AgentBridgeNode(Node):
         except (json.JSONDecodeError, TypeError) as e:
             self.get_logger().error(f'Failed to parse vision_context JSON: {e}')
 
+    def visual_evidence_callback(self , msg: String): 
+        try: 
+            self.latest_visual_evidence = json.loads(msg.data)
+            self.visual_evidence_received_at = self.get_clock().now()
+
+        except (json.JSONDecodeError, TypeError) as e:
+            self.get_logger().error(f'Failed to parse visual_evidence JSON: {e}')
+
+    def fresh_visual_evidence(self):
+        if not self.get_parameter('use_visual_evidence').value:
+            return None 
+        if self.latest_visual_evidence is None:
+            return None 
+        age = (self.get_clock().now() - self.visual_evidence_received_at).nanoseconds / 1e9
+        if age > self.get_parameter('evidence_max_age_s').value:
+            self.get_logger().warn(
+                f'[AGENT BRIDGE] visual_evidence is stale ({age:.1f}s): '
+                f'treated as unavaialeble , NOT as clear.'
+            )
+
+            return None 
+        return self.latest_visual_evidence
+
+    
+
     def run_mission(self, mission_text):
         self.current_mission_text = mission_text
 
         self.get_logger().info(f'[AGENT BRIDGE] Mission: "{mission_text}"')
+        evidence = self.fresh_visual_evidence()
+
+        self.get_logger().info(f'[AGENT BRIDGE] visual_evidence passed to agent: {evidence}')
+
+        if (self.get_parameter('use_visual_evidence').value and self.get_parameter('require_fresh_evidence').value
+            and evidence is None):
+            self.get_logger().warn(
+                '[AGENT BRIDGE] openCV evidence is required but missing or stale:'
+                'WAIT (fall-closed). Nothing sent to Nav2'
+            )
+            return
         try:
             raw_response = self.agent.interpret_mission(
                 mission_text,
                 world_state=self.latest_world_state,
-                vision_context=self.latest_vision_context)
+                vision_context=self.latest_vision_context,
+                visual_evidence = evidence
+                )
 
         except Exception as e:
             self.get_logger().error(
@@ -113,8 +167,9 @@ class AgentBridgeNode(Node):
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
         self.get_logger().info(
-            f'[NAV2 FEEDBACK] distance_remaining={feedback.distance_remaining:.2f}m, '
-            f'recoveries={feedback.number_of_recoveries}'
+             f'[NAV2 FEEDBACK] distance_remaining={feedback.distance_remaining:.2f}m, '
+            f'recoveries={feedback.number_of_recoveries}',
+            throttle_duration_sec=2.0
         )
 
     def goal_response_callback(self, future):
