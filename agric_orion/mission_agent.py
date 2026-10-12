@@ -24,6 +24,12 @@ MOCK_RESPONSES = {
         "target": {"location": "eastern_field_point"},
         "reason": "Eastern field point selected as requested."
     },
+
+        "go to the field centre": {
+        "action": "NAVIGATE",
+        "target": {"x": 0.0, "y": 0.0},
+        "reason": "Field centre selected as requested."
+    },
 }
 
 
