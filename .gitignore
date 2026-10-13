@@ -1,1 +1,6 @@
 /build_lambda/
+
+__pycache__/
+*.pyc
+*.zip
+.env
