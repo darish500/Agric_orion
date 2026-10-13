@@ -22,7 +22,9 @@ def _response(code, body):
 def _authorized(event):
     expected = os.environ.get('API_KEY')
     if not expected:
-        return True                      # no key configured (local runs)
+
+        return not os.environ.get('AWS_LAMBDA_FUNCTION_NAME')
+                          # no key configured (local runs)
     headers = {str(k).lower(): v for k, v in (event.get('headers') or {}).items()}
     return hmac.compare_digest(str(headers.get('x-api-key', '')), expected)
 

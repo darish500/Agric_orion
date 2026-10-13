@@ -30,7 +30,7 @@ class VisualEvidenceNode(Node):
         self.get_logger().info(f'visual_evidence_node up, cv2 {cv2.__version__}, backend={backend}')
         if not cv2.__version__.startswith('5.'):
             self.get_logger().error(
-                f'Open Cv {cv2._version__} is NOT 5.x , start this node witht the venv '
+                f'Open Cv {cv2.__version__} is NOT 5.x , start this node with the venv '
                 f'Python: python -m agric_orion.visual_evidence_node'
             )
 
