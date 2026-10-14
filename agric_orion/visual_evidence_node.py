@@ -15,6 +15,17 @@ from std_msgs.msg import String
 
 from agric_orion.detect_obstruction import detect
 
+def _read_private(name):
+    path = os.path.expanduser('~/.config/agri_orion/' + name)
+
+    try:
+        with open(path) as f:
+            return f.read().strip()
+
+    except OSError:
+        return ''
+    
+
 
 class VisualEvidenceNode(Node):
     def __init__(self):
@@ -28,6 +39,17 @@ class VisualEvidenceNode(Node):
         self.last = 0.0
         backend = self.get_parameter('backend').value
         self.get_logger().info(f'visual_evidence_node up, cv2 {cv2.__version__}, backend={backend}')
+
+        self.endpoint_url = (self.get_parameter('endpoint_url').value 
+                             or os.environ.get('AGRI_URL')
+                             or _read_private('function_url'))
+
+        self.detector_key = (os.environ.get('AGRI_KEY', '')
+                            or _read_private('detector_key')) 
+        if backend == 'url':
+            self.get_logger().info(
+                f'endpoint set: {bool(self.endpoint_url)}, key set: {bool(self.detector_key)}'
+            )      
         if not cv2.__version__.startswith('5.'):
             self.get_logger().error(
                 f'Open Cv {cv2.__version__} is NOT 5.x , start this node with the venv '
@@ -39,9 +61,9 @@ class VisualEvidenceNode(Node):
         payload = json.dumps(
             {'image_b64': base64.b64encode(png.tobytes()).decode()}).encode()
         req = urllib.request.Request(
-            self.get_parameter('endpoint_url').value, data=payload,
+            self.endpoint_url, data=payload,
             headers={'Content-Type': 'application/json',
-                     'x-api-key': os.environ.get('AGRI_KEY', '')}, method='POST')
+                     'x-api-key': self.detector_key}, method='POST')
         t0 = time.time()
         with urllib.request.urlopen(
                 req, timeout=self.get_parameter('timeout_s').value) as resp:
