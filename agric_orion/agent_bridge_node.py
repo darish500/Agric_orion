@@ -8,13 +8,25 @@ from nav2_msgs.action import NavigateToPose
 
 from agric_orion.mission_agent import MockNemotronAgent
 from agric_orion.agent_contract import validate_agent_response
-
+from agric_orion.agent_guard import GuardedAgent
 
 class AgentBridgeNode(Node):
     def __init__(self):
         super().__init__('agent_bridge_node')
 
-        self.agent = MockNemotronAgent()
+        self.declare_parameter('agent_backend', 'mock')
+        self.declare_parameter('bedrock_model_id' , 'global.amazon.nova-2-lite-v1:0')
+        self.agent_backend = self.get_parameter('agent_backend').value
+        if self.agent_backend =='bedrock':
+            from agric_orion.bedrock_agent import BedrockAgent
+            inner_agent = BedrockAgent(self.get_parameter('bedrock_model_id').value)
+
+        else:
+            inner_agent = MockNemotronAgent()
+
+        self.agent= GuardedAgent(inner_agent)
+        self.get_logger().info(f'[AGENT BRIDGE] agent_backend= {self.agent_backend}')
+        
         self.latest_world_state = None
         self.latest_vision_context = None
 
@@ -180,7 +192,9 @@ class AgentBridgeNode(Node):
                 f'[AGENT BRIDGE] Agent call failed: {e}. Nothing sent to Nav2.')
             return
 
-        self.get_logger().info(f'[MOCK AGENT] raw response: {raw_response}')
+        self.get_logger().info(
+            f'[AGENT:{self.agent_backend}] raw response: {raw_response}'
+        )
 
         is_valid, result = validate_agent_response(raw_response)
         self.get_logger().info(f'[VALIDATOR] valid={is_valid} -> {result}')
