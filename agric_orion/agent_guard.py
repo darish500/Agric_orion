@@ -23,8 +23,10 @@ class GuardedAgent:
 
         if lidar_blocked:
             return {'action': 'WAIT',
-                    'reason': 'guard override: LiDAR path_blocked is True.'}
+                    'reason': 'guard override: LiDAR path_blocked is True.', 
+                    'agent_proposed': response}
         if opencv_blocked:
             return {'action': 'WAIT',
-                    'reason': 'guard override: OpenCV reports a visual obstruction.'}
+                    'reason': 'guard override: OpenCV reports a visual obstruction.',
+                    'agent_proposed': response}
         return response
